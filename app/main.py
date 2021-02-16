@@ -13,8 +13,7 @@ else:
     r = redis.StrictRedis(host='redis', port=6379, db=0)
     tg_bot_token = open("/run/secrets/tg_bot_token").read().strip()
 
-def get_status():
-    nodes = r.smembers("nodes")
+def get_status(nodes):
     status = []
     for node in nodes:
         status.append({})
@@ -104,11 +103,11 @@ def index():
         for pid in removed:
             r.delete(pid)
 
-    status = get_status()
     if request.method == 'POST':
         if msg:
+            status = get_status(set([node]))
             r.set('last_event', msg)
-            msgs = status_strings(status) + ["<b>" + msg + "</b>"]
+            msgs = status_strings(status) + ["<b>" + msg + "</b>\n<a href=http://jp.xydustc.me:12340>View full status</a>"]
             for m in msgs:
                 if __name__ == '__main__':
                     requests.get("https://api.telegram.org/"+tg_bot_token+"/sendMessage?chat_id=-1001221829815&parse_mode=HTML&text="
@@ -118,6 +117,7 @@ def index():
                                 + urllib.parse.quote_plus(m))
         return ""
     if request.method == 'GET':
+        status = get_status(r.smembers("nodes"))
         msg = r.get('last_event').decode().replace('\n', "<br>")
         msg += "<pre>---------------------------------------------</pre>".join(status_strings(status))
         return msg
