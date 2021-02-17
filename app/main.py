@@ -16,7 +16,9 @@ else:
 def get_status(nodes):
     status = []
     for node in nodes:
-        status.append({})
+        status.append({'info':{},'gpus':{}})
+        last_active = json.loads(r.get(node+b"/info"))['last_active']
+        status[-1]['info']['last_active'] = last_active
         gpus = r.smembers(node)
         for gpu in gpus:
             card = {}
@@ -24,7 +26,7 @@ def get_status(nodes):
             card['procs'] = []
             for pid in r.smembers(gpu):
                 card['procs'].append(json.loads(r.get(pid)))
-            status[-1][gpu.decode()] = card
+            status[-1]['gpus'][gpu.decode()] = card
 
     return status
 
@@ -32,15 +34,16 @@ def status_strings(status):
     msgs = []
     for node in status:
         msg = '<pre>'
-        for gpu in node:
-            if node[gpu]['procs']:
-                msg += f"{gpu}:  {node[gpu]['info']['util']}%  {node[gpu]['info']['temp']}°C  ({node[gpu]['info']['free']} free):\n"
-                for proc in node[gpu]['procs']:
+        for gpu in node['gpus']:
+            if node['gpus'][gpu]['procs']:
+                msg += f"{gpu}:  {node['gpus'][gpu]['info']['util']}%  {node['gpus'][gpu]['info']['temp']}°C  ({node['gpus'][gpu]['info']['free']} free):\n"
+                for proc in node['gpus'][gpu]['procs']:
                     msg += f"{proc['pid'] :<6} {proc['user'] :^8} {proc['since'] :^15} {proc['usage']}  {proc['cmd']}\n"
             else:
-                msg += f"</pre><b>{gpu}:  {node[gpu]['info']['util']}%  {node[gpu]['info']['temp']}°C  ({node[gpu]['info']['free']} free):</b><pre>\n"
+                msg += f"</pre><b>{gpu}:  {node['gpus'][gpu]['info']['util']}%  {node['gpus'][gpu]['info']['temp']}°C  ({node['gpus'][gpu]['info']['free']} free):</b><pre>\n"
             msg += "\n"
-        msg += "</pre>"
+        last_active = node['info']['last_active']
+        msg += f"</pre>\nLast active user: {last_active['user']} {last_active['last']} {last_active['what']}"
         msgs.append(msg)
     return msgs
 
@@ -48,9 +51,10 @@ def status_strings(status):
 def index():
     msg = ''
     if request.method == 'POST':
-        data = request.json
+        data = request.json['gpus']
+        node = request.json['info']['node']
+        r.set(node+"/info", json.dumps(request.json['info']))
         cards = set()
-        node = data[0]['node']
         if r.sadd("nodes", node):
             msg += f"New node {node}\n"
         for card in data:
