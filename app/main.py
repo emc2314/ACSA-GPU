@@ -109,7 +109,7 @@ def index():
 
     if request.method == 'POST':
         if msg:
-            status = get_status(set([node]))
+            status = get_status(set([node.encode()]))
             r.set('last_event', msg)
             msgs = status_strings(status) + ["<b>" + msg + '</b>\n<a href="http://jp.xydustc.me:12340">View full status</a>']
             for m in msgs:
