@@ -111,7 +111,7 @@ def index():
         if msg:
             status = get_status(set([node.encode()]))
             r.set('last_event', msg)
-            msgs = status_strings(status) + ["<b>" + msg + '</b>\n<a href="http://jp.xydustc.me:12340">View full status</a>']
+            msgs = status_strings(status) + ["<b>" + msg + '</b>\nView full status:\nhttp://jp.xydustc.me:12340']
             for m in msgs:
                 if __name__ == '__main__':
                     requests.get("https://api.telegram.org/"+tg_bot_token+"/sendMessage?chat_id=-1001221829815&parse_mode=HTML&text="
